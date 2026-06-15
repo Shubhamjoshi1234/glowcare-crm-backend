@@ -1,0 +1,31 @@
+{
+  "name": "glowcare-crm-backend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm --workspace packages/shared run build && npm --workspace apps/crm-api run prisma:generate",
+    "dev": "npm --workspace packages/shared run build && npm run db:setup && concurrently --names CRM,CHANNEL --prefix-colors blue,magenta \"npm run dev:crm\" \"npm run dev:channel\"",
+    "dev:crm": "npm --workspace apps/crm-api run dev",
+    "dev:channel": "npm --workspace apps/channel-service run dev",
+    "build": "npm --workspace packages/shared run build && npm --workspace apps/crm-api run build && npm --workspace apps/channel-service run build",
+    "lint": "npm --workspaces run lint --if-present",
+    "test": "npm --workspaces run test --if-present",
+    "start:crm": "npm --workspace apps/crm-api run start",
+    "start:channel": "npm --workspace apps/channel-service run start",
+    "deploy:crm": "npm run db:migrate && npm run db:seed && npm run start:crm",
+    "db:migrate": "npm --workspace apps/crm-api run prisma:migrate",
+    "db:seed": "npm --workspace apps/crm-api run seed",
+    "db:seed:reset": "npm --workspace apps/crm-api run seed -- --reset",
+    "db:setup": "npm run db:migrate && npm run db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}
