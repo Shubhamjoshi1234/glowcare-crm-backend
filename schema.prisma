@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id                String             @id @default(cuid())
+  name              String
+  email             String?            @unique
+  phone             String?            @unique
+  city              String?
+  age               Int?
+  gender            String?
+  preferredChannel  String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  orders            Order[]
+  campaignAudiences CampaignAudience[]
+  communications    Communication[]
+
+  @@index([city])
+  @@index([preferredChannel])
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  customerId  String
+  productName String
+  category    String
+  amount      Float
+  orderDate   DateTime
+  createdAt   DateTime @default(now())
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([category])
+  @@index([orderDate])
+}
+
+model Segment {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  rulesJson   Json
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  campaigns   Campaign[]
+}
+
+model Campaign {
+  id                String             @id @default(cuid())
+  name              String
+  segmentId         String
+  channel           String
+  campaignGoal      String?
+  messageTemplate   String
+  status            String             @default("draft")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  sentAt            DateTime?
+  segment            Segment            @relation(fields: [segmentId], references: [id])
+  audience           CampaignAudience[]
+  communications    Communication[]
+  receiptEvents      ReceiptEvent[]
+
+  @@index([segmentId])
+  @@index([status])
+}
+
+model CampaignAudience {
+  id           String   @id @default(cuid())
+  campaignId   String
+  customerId   String
+  snapshotJson Json
+  createdAt    DateTime @default(now())
+  campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customer     Customer @relation(fields: [customerId], references: [id])
+
+  @@unique([campaignId, customerId])
+  @@index([campaignId])
+}
+
+model Communication {
+  id                  String              @id @default(cuid())
+  campaignId          String
+  customerId          String
+  channel             String
+  recipientJson       Json
+  personalizedMessage String
+  personalizationSource String             @default("template")
+  personalizationReason String?
+  currentStatus       String              @default("queued")
+  providerMessageId   String?
+  failureReason       String?
+  sentAt              DateTime?
+  deliveredAt         DateTime?
+  failedAt            DateTime?
+  openedAt            DateTime?
+  readAt              DateTime?
+  clickedAt           DateTime?
+  convertedAt         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  campaign            Campaign             @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customer            Customer             @relation(fields: [customerId], references: [id])
+  receiptEvents       ReceiptEvent[]
+
+  @@unique([campaignId, customerId])
+  @@index([campaignId, currentStatus])
+  @@index([providerMessageId])
+}
+
+model ReceiptEvent {
+  id                  String         @id @default(cuid())
+  eventId             String         @unique
+  communicationId     String?
+  campaignId          String?
+  status              String
+  rawPayload          Json
+  receivedAt          DateTime       @default(now())
+  processed           Boolean        @default(false)
+  processingNote      String?
+  communication       Communication? @relation(fields: [communicationId], references: [id], onDelete: SetNull)
+  campaign            Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([communicationId])
+  @@index([campaignId, receivedAt])
+}
